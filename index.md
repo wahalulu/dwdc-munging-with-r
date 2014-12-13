@@ -1,0 +1,229 @@
+---
+title       : "Data Wrangling Hacks with R"
+subtitle    : "December 3, 2014"
+author      : "Marck Vaisman"
+job         : "Principal Data Scientist, DataXtract & Co-founder, Data Community DC"
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+## Agenda
+
+- Miscellaneous tips & tricks (brain dump)
+- Reading in data
+- Munging with data.table and dplyr 
+- Examples (not using the flights data)
+- Writing data
+
+---
+
+## Takeaways for today
+
+- If you haven't used data.table or dplyr, hopefully I can convince you to give it a try
+- If you have used it, show you some tips/tricks, maybe something you don't know
+- Hope to show you these two packages applied to real world munging (not just dummy data generated in examples)
+- I'm just a user and know how to use it. There is lots going on under the hood that I'm not really sure how it works
+
+---
+
+## What is munging?
+
+- No one likes to talk about it, and lots of time spent doint it, and it's *VERY* important that it is done right.
+- Extracting
+- Manipulating
+- Cleansing
+- Normalizing
+- Reshaping (stacking, slicing, etc.)
+- Aggregating
+- In summary: making the data usable. 
+
+---
+
+## What is tidy data?
+
+- [Hadley's paper on Tidy Data](http://vita.had.co.nz/papers/tidy-data.pdf)
+- Data in long format in a key-value arrangement
+  - keys can be compound keys
+  - not all long data is tidy data
+- Some R packages like wide data (arrays), some like long data.
+- Data for analysis is usually *NOT* in 3NF
+- `reshape2` package (melt & case), now `tidyr` package
+
+---
+
+## Reading in Data
+
+- stringsAsFactors - it'll bite you. You can set it up under options.
+- Use `scan` when you can
+- `fread` from data.table package rocks, and you can specify wether return a data.frame instead of data.table (might be better sometimes)
+- when all else fails, use `readLines`, `scan`, and `str_split`
+- If you need to use read.csv or read.table, specify classes.
+
+```r
+h <- read.table("transactions.csv", sep = ",",header = T,nrows = 10000)
+```
+
+```
+## Warning in file(file, "rt"): cannot open file 'transactions.csv': No such
+## file or directory
+```
+
+```
+## Error in file(file, "rt"): cannot open the connection
+```
+
+```r
+col_classes <- unname(unlist(lapply(h, class)))
+```
+
+```
+## Error in lapply(h, class): object 'h' not found
+```
+
+```r
+## data <- read.table("transactions.csv", sep = ",", header = T,colClasses = col_classes)
+```
+- JSON (rjson, RJSONIO, jsonlite)
+
+---
+
+## Reading in data from Excel (yeah, Excel)
+
+- xlsx package: uses rJava and can open .xls
+- openxlsx: doesn't use Java but cannot open .xls. Seems much faster
+- Be careful with dates!!! Most of the time, human entered data in excel, especially dates get imported as text integers. Spot check your conversion.
+
+```r
+i <- "25569" ## should be 1/1/1970
+as.Date(as.integer(i), origin = "1900-01-01")
+```
+
+```
+## [1] "1970-01-03"
+```
+
+```r
+as.Date(as.integer(i) - 2, origin = "1900-01-01") 
+```
+
+```
+## [1] "1970-01-01"
+```
+- If your dates still don't match, need to change origin to "1904-01-01" (mac legacy)
+
+---
+
+## A Regular Expression is an awesome friend
+
+- `gsub`
+- `grep`
+- `grepl`
+
+--- 
+
+## Other Miscellaneous Tips and Tricks
+
+- Use lowercase field names and remove periods, it's easier to type `names(df) <- tolower(gsub("\\.", "_", names(df)))`
+- When running lapply on a data.frame, instead of typing `as.data.frame(lapply...)` you can just reassign it back as `df[] <- lapply(df, ...)` (one of my new favorites)
+- Extract elements from lists by using `\`[\``
+
+
+
+---
+
+## You have to love rbindlist (and now rbind_all and rbind_list)
+
+- [Stack Overflow question on r-binding millions of data.frames](http://stackoverflow.com/questions/9728407/trouble-converting-long-list-of-data-frames-1-million-to-single-data-frame-us)
+- When stacking in base r `rbind`, column names need to match
+- plyr had `rbind.fill` but can still be relatively slow
+- dplyr has rbind\_all() (passing a list of datasets to rbind) or rbind\_list()
+
+--- 
+
+## `data.table` basics
+
+[Great cheat sheet!](http://blog.datacamp.com/data-table-cheat-sheet/)
+- `tbl()` shows you the data.tables loaded in memory
+- `:=` is an amazing operator
+- If you have an existing data.table `DT` , you can create a new empty data.table using `DT[0]`
+- `.SD` and `.SDCols` 
+- `.N`
+- `.EACHI` is fairly new
+
+---
+
+## `data.table` Pros
+
+- data.tables are also data.frames so (usually) and function that accepts a data.frame will also take a data.table without balking
+- much faster, especially on large datasets
+- indexed
+- data.tables support complex queries
+- memory efficient
+- somewhat similar to SQL
+- not as buggy as it used to be (v 1.9.2)
+- great documentation/FAQ
+
+---
+
+## `data.table` Cons
+
+- syntax is tricky (although much more compact)
+- harder to use
+- you have to be careful as to not make changes to the original object (pass by reference)
+
+---
+
+
+## data.table or dplyr?
+
+it depends...
+
+---
+
+## dplyr basics
+
+- `tbl()` creates the abstracted dataset (from data.frame, data.table, database, etc.)
+- `filter()` for subsetting rows: `filter(source, condition_1, condition_2,...)`. The conditions are joined together by the AND operator. Explicit OR's are possible
+- `arrange()` for ordering/sorting source by a given set of fields
+- `select()` for selecting specific fields of a dataset
+- `mutate()` for adding/transforming columns
+- `summarise()` for collapsing data into a single row (like plyr)
+- `group_by()` for grouping
+- `%>%` for chaining operations - the pipeline
+- join operations: `left_join(), inner_join(), semi_join(), anti_join()`
+
+---
+
+## Example: Live Coding: simple manipulation (not using the flights example)
+
+---
+
+## data.table vs dplyr
+
+- [Great article on this](http://www.brodieg.com/?p=7)
+
+---
+
+## My favorite packages
+
+- The Hadleyveryse (ggplot2, reshape2, stringr, lubridate, tidyr)
+
+---
+
+## Final thoughts
+
+- data.table and dplyr are excellent tools for data munging and pre-processing. They are very fast.
+- They work great when doing relatively simple aggregations where you collapse a group down to one row, or modify a column
+- data.table should work for complex functions, but the syntax is difficult to understand and manage
+
+---
+
+## Additional Resources
+
+- [http://stackoverflow.com/questions/26864090/multi-windows-range-calculations-data-table-vs-dplyr](http://stackoverflow.com/questions/26864090/multi-windows-range-calculations-data-table-vs-dplyr)
+- [http://zevross.com/blog/2014/03/26/four-reasons-why-you-should-check-out-the-r-package-dplyr-3/](http://zevross.com/blog/2014/03/26/four-reasons-why-you-should-check-out-the-r-package-dplyr-3/)
+- [http://stevejgoodman.blogspot.com/2014/08/a-first-look-at-dplyr.html]

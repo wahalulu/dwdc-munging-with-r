@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Data Wrangling Hacks with R</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Data Wrangling Hacks with R">
+  <meta name="author" content="Marck Vaisman">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Data Wrangling Hacks with R</h1>
+    <h2>December 3, 2014</h2>
+    <p>Marck Vaisman<br/>Principal Data Scientist, DataXtract &amp; Co-founder, Data Community DC</p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Agenda</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>Miscellaneous tips &amp; tricks (brain dump)</li>
+<li>Reading in data</li>
+<li>Munging with data.table and dplyr </li>
+<li>Examples (not using the flights data)</li>
+<li>Writing data</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Takeaways for today</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>If you haven&#39;t used data.table or dplyr, hopefully I can convince you to give it a try</li>
+<li>If you have used it, show you some tips/tricks, maybe something you don&#39;t know</li>
+<li>Hope to show you these two packages applied to real world munging (not just dummy data generated in examples)</li>
+<li>I&#39;m just a user and know how to use it. There is lots going on under the hood that I&#39;m not really sure how it works</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>What is munging?</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>No one likes to talk about it, and lots of time spent doint it, and it&#39;s <em>VERY</em> important that it is done right.</li>
+<li>Extracting</li>
+<li>Manipulating</li>
+<li>Cleansing</li>
+<li>Normalizing</li>
+<li>Reshaping (stacking, slicing, etc.)</li>
+<li>Aggregating</li>
+<li>In summary: making the data usable. </li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>What is tidy data?</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><a href="http://vita.had.co.nz/papers/tidy-data.pdf">Hadley&#39;s paper on Tidy Data</a></li>
+<li>Data in long format in a key-value arrangement
+
+<ul>
+<li>keys can be compound keys</li>
+<li>not all long data is tidy data</li>
+</ul></li>
+<li>Some R packages like wide data (arrays), some like long data.</li>
+<li>Data for analysis is usually <em>NOT</em> in 3NF</li>
+<li><code>reshape2</code> package (melt &amp; case), now <code>tidyr</code> package</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>Reading in Data</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>stringsAsFactors - it&#39;ll bite you. You can set it up under options.</li>
+<li>Use <code>scan</code> when you can</li>
+<li><code>fread</code> from data.table package rocks, and you can specify wether return a data.frame instead of data.table (might be better sometimes)</li>
+<li>when all else fails, use <code>readLines</code>, <code>scan</code>, and <code>str_split</code></li>
+<li>If you need to use read.csv or read.table, specify classes.</li>
+</ul>
+
+<pre><code class="r">h &lt;- read.table(&quot;transactions.csv&quot;, sep = &quot;,&quot;,header = T,nrows = 10000)
+</code></pre>
+
+<pre><code>## Warning in file(file, &quot;rt&quot;): cannot open file &#39;transactions.csv&#39;: No such
+## file or directory
+</code></pre>
+
+<pre><code>## Error in file(file, &quot;rt&quot;): cannot open the connection
+</code></pre>
+
+<pre><code class="r">col_classes &lt;- unname(unlist(lapply(h, class)))
+</code></pre>
+
+<pre><code>## Error in lapply(h, class): object &#39;h&#39; not found
+</code></pre>
+
+<pre><code class="r">## data &lt;- read.table(&quot;transactions.csv&quot;, sep = &quot;,&quot;, header = T,colClasses = col_classes)
+</code></pre>
+
+<ul>
+<li>JSON (rjson, RJSONIO, jsonlite)</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-6" style="background:;">
+  <hgroup>
+    <h2>Reading in data from Excel (yeah, Excel)</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>xlsx package: uses rJava and can open .xls</li>
+<li>openxlsx: doesn&#39;t use Java but cannot open .xls. Seems much faster</li>
+<li>Be careful with dates!!! Most of the time, human entered data in excel, especially dates get imported as text integers. Spot check your conversion.</li>
+</ul>
+
+<pre><code class="r">i &lt;- &quot;25569&quot; ## should be 1/1/1970
+as.Date(as.integer(i), origin = &quot;1900-01-01&quot;)
+</code></pre>
+
+<pre><code>## [1] &quot;1970-01-03&quot;
+</code></pre>
+
+<pre><code class="r">as.Date(as.integer(i) - 2, origin = &quot;1900-01-01&quot;) 
+</code></pre>
+
+<pre><code>## [1] &quot;1970-01-01&quot;
+</code></pre>
+
+<ul>
+<li>If your dates still don&#39;t match, need to change origin to &quot;1904-01-01&quot; (mac legacy)</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-7" style="background:;">
+  <hgroup>
+    <h2>A Regular Expression is an awesome friend</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><code>gsub</code></li>
+<li><code>grep</code></li>
+<li><code>grepl</code></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-8" style="background:;">
+  <hgroup>
+    <h2>Other Miscellaneous Tips and Tricks</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>Use lowercase field names and remove periods, it&#39;s easier to type <code>names(df) &lt;- tolower(gsub(&quot;\\.&quot;, &quot;_&quot;, names(df)))</code></li>
+<li>When running lapply on a data.frame, instead of typing <code>as.data.frame(lapply...)</code> you can just reassign it back as <code>df[] &lt;- lapply(df, ...)</code> (one of my new favorites)</li>
+<li>Extract elements from lists by using <code>\</code>[``</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-9" style="background:;">
+  <hgroup>
+    <h2>You have to love rbindlist (and now rbind_all and rbind_list)</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><a href="http://stackoverflow.com/questions/9728407/trouble-converting-long-list-of-data-frames-1-million-to-single-data-frame-us">Stack Overflow question on r-binding millions of data.frames</a></li>
+<li>When stacking in base r <code>rbind</code>, column names need to match</li>
+<li>plyr had <code>rbind.fill</code> but can still be relatively slow</li>
+<li>dplyr has rbind_all() (passing a list of datasets to rbind) or rbind_list()</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-10" style="background:;">
+  <hgroup>
+    <h2><code>data.table</code> basics</h2>
+  </hgroup>
+  <article data-timings="">
+    <p><a href="http://blog.datacamp.com/data-table-cheat-sheet/">Great cheat sheet!</a></p>
+
+<ul>
+<li><code>tbl()</code> shows you the data.tables loaded in memory</li>
+<li><code>:=</code> is an amazing operator</li>
+<li>If you have an existing data.table <code>DT</code> , you can create a new empty data.table using <code>DT[0]</code></li>
+<li><code>.SD</code> and <code>.SDCols</code> </li>
+<li><code>.N</code></li>
+<li><code>.EACHI</code> is fairly new</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-11" style="background:;">
+  <hgroup>
+    <h2><code>data.table</code> Pros</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>data.tables are also data.frames so (usually) and function that accepts a data.frame will also take a data.table without balking</li>
+<li>much faster, especially on large datasets</li>
+<li>indexed</li>
+<li>data.tables support complex queries</li>
+<li>memory efficient</li>
+<li>somewhat similar to SQL</li>
+<li>not as buggy as it used to be (v 1.9.2)</li>
+<li>great documentation/FAQ</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-12" style="background:;">
+  <hgroup>
+    <h2><code>data.table</code> Cons</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>syntax is tricky (although much more compact)</li>
+<li>harder to use</li>
+<li>you have to be careful as to not make changes to the original object (pass by reference)</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-13" style="background:;">
+  <hgroup>
+    <h2>data.table or dplyr?</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>it depends...</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-14" style="background:;">
+  <hgroup>
+    <h2>dplyr basics</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><code>tbl()</code> creates the abstracted dataset (from data.frame, data.table, database, etc.)</li>
+<li><code>filter()</code> for subsetting rows: <code>filter(source, condition_1, condition_2,...)</code>. The conditions are joined together by the AND operator. Explicit OR&#39;s are possible</li>
+<li><code>arrange()</code> for ordering/sorting source by a given set of fields</li>
+<li><code>select()</code> for selecting specific fields of a dataset</li>
+<li><code>mutate()</code> for adding/transforming columns</li>
+<li><code>summarise()</code> for collapsing data into a single row (like plyr)</li>
+<li><code>group_by()</code> for grouping</li>
+<li><code>%&gt;%</code> for chaining operations - the pipeline</li>
+<li>join operations: <code>left_join(), inner_join(), semi_join(), anti_join()</code></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-15" style="background:;">
+  <hgroup>
+    <h2>Example: Live Coding: simple manipulation (not using the flights example)</h2>
+  </hgroup>
+  <article data-timings="">
+    
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-16" style="background:;">
+  <hgroup>
+    <h2>data.table vs dplyr</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><a href="http://www.brodieg.com/?p=7">Great article on this</a></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-17" style="background:;">
+  <hgroup>
+    <h2>My favorite packages</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>The Hadleyveryse (ggplot2, reshape2, stringr, lubridate, tidyr)</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-18" style="background:;">
+  <hgroup>
+    <h2>Final thoughts</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>data.table and dplyr are excellent tools for data munging and pre-processing. They are very fast.</li>
+<li>They work great when doing relatively simple aggregations where you collapse a group down to one row, or modify a column</li>
+<li>data.table should work for complex functions, but the syntax is difficult to understand and manage</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-19" style="background:;">
+  <hgroup>
+    <h2>Additional Resources</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><a href="http://stackoverflow.com/questions/26864090/multi-windows-range-calculations-data-table-vs-dplyr">http://stackoverflow.com/questions/26864090/multi-windows-range-calculations-data-table-vs-dplyr</a></li>
+<li><a href="http://zevross.com/blog/2014/03/26/four-reasons-why-you-should-check-out-the-r-package-dplyr-3/">http://zevross.com/blog/2014/03/26/four-reasons-why-you-should-check-out-the-r-package-dplyr-3/</a></li>
+<li>[<a href="http://stevejgoodman.blogspot.com/2014/08/a-first-look-at-dplyr.html">http://stevejgoodman.blogspot.com/2014/08/a-first-look-at-dplyr.html</a>]</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='Agenda'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='Takeaways for today'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='What is munging?'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='What is tidy data?'>
+         4
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=5 title='Reading in Data'>
+         5
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=6 title='Reading in data from Excel (yeah, Excel)'>
+         6
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=7 title='A Regular Expression is an awesome friend'>
+         7
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=8 title='Other Miscellaneous Tips and Tricks'>
+         8
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=9 title='You have to love rbindlist (and now rbind_all and rbind_list)'>
+         9
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=10 title='<code>data.table</code> basics'>
+         10
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=11 title='<code>data.table</code> Pros'>
+         11
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=12 title='<code>data.table</code> Cons'>
+         12
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=13 title='data.table or dplyr?'>
+         13
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=14 title='dplyr basics'>
+         14
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=15 title='Example: Live Coding: simple manipulation (not using the flights example)'>
+         15
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=16 title='data.table vs dplyr'>
+         16
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=17 title='My favorite packages'>
+         17
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=18 title='Final thoughts'>
+         18
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=19 title='Additional Resources'>
+         19
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
